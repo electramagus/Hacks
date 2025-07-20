@@ -21,14 +21,14 @@ Life is full of annoying little problems that most people just accept. But we're
 
 This repository is our way of saying: *"Hey, if you're crazy enough to solve problems that don't need solving, you're our kind of people."*
 
----
+
 ## 🛠️ Current Hacks
 
 ### 🎵 [Spotify Playlist Downloader](./Spotify-playlist-downloader/)
 **The Problem:** You have a Spotify playlist but want the actual MP3 files locally downloaded.  
 **The Crazy Solution:** A Python script that hunts down each song on YouTube and downloads it as an MP3.  
 **Why It's Genius:** Because sometimes you need your music offline, and sometimes you just want to see if you can make it happen.
----
+
 
 ## 🎨 Want to Contribute Your Own Hacks?
 
