@@ -22,17 +22,12 @@ except ImportError as e:
     exit(1)
 
 # === CONFIG ===
-# you need to sign in on a spotify developers account,
-# just log in at https://developer.spotify.com/dashboard with your spotify account details
-# create an app, for redirect url use http://127.0.0.1:8000/callback
-# fill in the client id, secret and playlist url. works for private playlist so dont worry.
-
-SPOTIFY_CLIENT_ID = "your client id"
-SPOTIFY_CLIENT_SECRET = "your client secret" 
-SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8000/callback" #unless you want to run it remotely dont touch this
-PLAYLIST_ID = "your spotify playlist url"  # Can also be playlist URL
-OUTPUT_DIR = r"C:\Users......" # you need to add the full path where you want your downloaded songs to be saved.
-FFMPEG_PATH = "ffmpeg"  # make sure you have ffmpeg downloaded.
+SPOTIFY_CLIENT_ID = "b8921d57517644cdbbf5365f26d9461a"
+SPOTIFY_CLIENT_SECRET = "48079909c1e745679ac19fc6f3b92938" 
+SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8000/callback"
+PLAYLIST_ID = "https://open.spotify.com/playlist/1k9c2hqwepK5KzEldgTWQS?si=oOZWlk-1RCiL_2-UTy3DIQ&pt=3c7a8e6fafb538538f7e00eef35efe7d&pi=IJfN2zw8RcC1n"  # Can also be playlist URL
+OUTPUT_DIR = r"C:\Users\Creed\OneDrive\Desktop\Music"
+FFMPEG_PATH = "ffmpeg"  # Assumes it's in PATH
 
 # Audio quality options: 320K, 256K, 192K, 128K, 64K
 AUDIO_QUALITY = "320K"
