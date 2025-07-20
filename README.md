@@ -2,7 +2,8 @@
 
 > **"When life gives you lemons, build a lemon-powered rocket ship!"** 🍋🚀
 
-Welcome to **Hacks** - a collection of wild, ingenious, and sometimes borderline-insane solutions to real-world problems. This is where creativity meets necessity, where duct tape meets code, and where "that's impossible" becomes "hold my coffee, watch this."
+Welcome to **Hacks** - a collection of wild, ingenious, and sometimes borderline-insane solutions to real-world problems.
+This is where creativity meets necessity, where duct tape meets code, and where "that's impossible" becomes "hold my coffee, watch this."
 
 ---
 
@@ -15,9 +16,9 @@ This repository is a treasure trove of **crazy-ass solutions** to problems that 
 
 Life is full of annoying little problems that most people just accept. But we're not most people. We're the ones who:
 
-- **Question everything** - "Why can't I do this?"
-- **Build solutions** - "Let me fix that for you"
-- **Share knowledge** - "Here's how I solved it"
+- **Question everything** 
+- **Build solutions**
+- **Share knowledge**
 
 This repository is our way of saying: *"Hey, if you're crazy enough to solve problems that don't need solving, you're our kind of people."*
 
