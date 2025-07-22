@@ -1,0 +1,7 @@
+spotipy
+python-dotenv
+tqdm
+aiofiles
+psutil
+yt-dlp
+rich 
