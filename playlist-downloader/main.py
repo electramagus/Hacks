@@ -556,9 +556,9 @@ def main():
             if choice == 'd':
                 # Launch async_downloader.py for all playlists
                 console.print("[green]Starting download of all missing songs...[/green]")
-                import subprocess
                 args = [
-                    sys.executable, 'async_downloader.py',
+                    sys.executable, 
+                    'async_downloader.py',
                     '--search-workers', str(SEARCH_WORKERS),
                     '--download-workers', str(DOWNLOAD_WORKERS),
                     '--audio-format', AUDIO_FORMAT,

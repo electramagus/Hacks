@@ -2,8 +2,8 @@ import os
 import sys
 import re
 import json
-import asyncio
 import subprocess
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
@@ -92,14 +92,20 @@ async def load_playlists_async() -> List[Dict]:
     return playlists
 
 async def get_youtube_playlist_videos(playlist_url: str) -> list:
-    # Use yt-dlp to get all video metadata from a YouTube playlist
-    import subprocess
+    # Use yt-dlp to get all video metadata from a YouTube playlist asynchronously
     import json
+    import asyncio
     try:
-        result = subprocess.run([
-            "yt-dlp", "--flat-playlist", "-J", playlist_url
-        ], capture_output=True, text=True, check=True)
-        data = json.loads(result.stdout)
+        proc = await asyncio.create_subprocess_exec(
+            "yt-dlp", "--flat-playlist", "-J", playlist_url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            print(f"yt-dlp error: {stderr.decode()}")
+            return []
+        data = json.loads(stdout.decode())
         entries = data.get('entries', [])
         videos = []
         for entry in entries:
@@ -267,12 +273,18 @@ async def main():
             if not playlist_name:
                 # Try to fetch playlist name via yt-dlp again (slower but accurate)
                 try:
-                    import subprocess, json
-                    result = subprocess.run([
-                        "yt-dlp", "-J", "--flat-playlist", pl['url']
-                    ], capture_output=True, text=True, check=True)
-                    data = json.loads(result.stdout)
-                    playlist_name = data.get('title')
+                    import json, asyncio
+                    proc2 = await asyncio.create_subprocess_exec(
+                        "yt-dlp", "-J", "--flat-playlist", pl['url'],
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout2, stderr2 = await proc2.communicate()
+                    if proc2.returncode == 0:
+                        data = json.loads(stdout2.decode())
+                        playlist_name = data.get('title')
+                    else:
+                        playlist_name = pl['label']
                 except Exception:
                     playlist_name = pl['label']
             playlist_name = sanitize_filename(playlist_name)
