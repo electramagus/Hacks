@@ -79,18 +79,6 @@ config_json = load_config_json()
 SEARCH_WORKERS = int(config_json.get('max_threads', DEFAULT_SEARCH_WORKERS))
 DOWNLOAD_WORKERS = int(config_json.get('max_processes', DEFAULT_DOWNLOAD_WORKERS))
 
-# Print device config summary
-# Remove or comment out the following block:
-# print("\n=== Device Configuration ===")
-# if config_json:
-#     for k, v in config_json.items():
-#         print(f"{k}: {v}")
-# else:
-#     print("No config.json found or config is empty. Using defaults.")
-# print(f"Search workers: {SEARCH_WORKERS}")
-# print(f"Download workers: {DOWNLOAD_WORKERS}")
-# print("===========================\n")
-
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8000/callback")
