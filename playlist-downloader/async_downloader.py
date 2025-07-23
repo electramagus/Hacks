@@ -23,8 +23,6 @@ from rich.text import Text
 from rich import box
 console = Console()
 
-# === LOAD CONFIG ===
-# Remove dotenv, config_json, and os.getenv loading
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--search-workers', type=int, default=3)
