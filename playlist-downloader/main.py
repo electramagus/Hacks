@@ -79,6 +79,17 @@ config_json = load_config_json()
 SEARCH_WORKERS = int(config_json.get('max_threads', DEFAULT_SEARCH_WORKERS))
 DOWNLOAD_WORKERS = int(config_json.get('max_processes', DEFAULT_DOWNLOAD_WORKERS))
 
+# Print device config summary
+# Remove or comment out the following block:
+# print("\n=== Device Configuration ===")
+# if config_json:
+#     for k, v in config_json.items():
+#         print(f"{k}: {v}")
+# else:
+#     print("No config.json found or config is empty. Using defaults.")
+# print(f"Search workers: {SEARCH_WORKERS}")
+# print(f"Download workers: {DOWNLOAD_WORKERS}")
+# print("===========================\n")
 
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
@@ -366,29 +377,30 @@ def get_spotify_tracks(sp, playlist_url):
         print(f"Error fetching Spotify tracks: {e}")
         return None, []
 
-def get_youtube_playlist_tracks_sync(playlist_url: str) -> list:
-    """Fetches video information from a youtube playlist and returns it in a track-like format."""
+def get_youtube_playlist_tracks_sync(playlist_url: str):
+    """Fetches the YouTube playlist name and videos, returns (playlist_name, [track dicts with name, artist, url])"""
     import subprocess
     import json
     try:
-        # Use -J to get JSON output, --flat-playlist to avoid fetching videos from other playlists.
         result = subprocess.run(
             ["yt-dlp", "-J", "--flat-playlist", playlist_url],
             capture_output=True, text=True, check=True, encoding='utf-8'
         )
         data = json.loads(result.stdout)
+        playlist_name = data.get('title', None)
         tracks = []
         for entry in data.get('entries', []):
-            if entry and entry.get('title'):
+            if entry and entry.get('title') and entry.get('id'):
                 track_info = {
                     'name': entry['title'],
-                    'artist': entry.get('uploader', 'Unknown Uploader'), # Match Spotify's 'artist' key
+                    'artist': entry.get('uploader', 'Unknown Uploader'),
+                    'url': f"https://www.youtube.com/watch?v={entry['id']}"
                 }
                 tracks.append(track_info)
-        return tracks
+        return playlist_name, tracks
     except Exception as e:
         console.print(f"[red]Failed to fetch YouTube playlist info: {e}[/red]")
-        return []
+        return None, []
 
 def main():
     # Beautified Device Configuration
@@ -474,8 +486,12 @@ def main():
                     if ptype == 'spotify':
                         playlist_name, tracks = get_spotify_tracks(sp, link)
                     elif ptype == 'youtube':
-                        playlist_name = sanitize_filename(label)
-                        tracks = get_youtube_playlist_tracks_sync(link)
+                        playlist_name, tracks = get_youtube_playlist_tracks_sync(link)
+                        if playlist_name:
+                            playlist_name = sanitize_filename(playlist_name)
+                        else:
+                            playlist_name = sanitize_filename(label)
+
                     else:
                         console.print(f"[yellow]Skipping unsupported playlist type '{ptype}' for: {label}[/yellow]")
                         progress.advance(task)

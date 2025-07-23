@@ -259,7 +259,23 @@ async def main():
             if not video_infos:
                 console.print(f"[red]Could not fetch YouTube playlist: {pl['label']}[/red]")
                 continue
-            playlist_name = sanitize_filename(pl['label'])
+            # Fetch playlist name from yt-dlp metadata
+            playlist_name = None
+            if video_infos and isinstance(video_infos, list) and hasattr(video_infos[0], 'get'):
+                # Defensive: check if video_infos contains playlist_name, fallback to label
+                playlist_name = video_infos[0].get('playlist_name')
+            if not playlist_name:
+                # Try to fetch playlist name via yt-dlp again (slower but accurate)
+                try:
+                    import subprocess, json
+                    result = subprocess.run([
+                        "yt-dlp", "-J", "--flat-playlist", pl['url']
+                    ], capture_output=True, text=True, check=True)
+                    data = json.loads(result.stdout)
+                    playlist_name = data.get('title')
+                except Exception:
+                    playlist_name = pl['label']
+            playlist_name = sanitize_filename(playlist_name)
             playlist_dir = os.path.join(OUTPUT_DIR, playlist_name)
             os.makedirs(playlist_dir, exist_ok=True)
             local_files = already_downloaded_files(playlist_dir)
@@ -343,9 +359,12 @@ async def main():
     num_download_workers = DOWNLOAD_WORKERS
     search_tasks = [asyncio.create_task(search_worker()) for _ in range(num_search_workers)]
     download_tasks = [asyncio.create_task(download_worker()) for _ in range(num_download_workers)]
-    # Feed jobs to search queue
+    # Feed jobs: For YouTube playlist jobs (with 'youtube_url'), skip search and go straight to download queue
     for job in jobs:
-        await search_queue.put(job)
+        if job.get('youtube_url'):
+            await download_queue.put(job)
+        else:
+            await search_queue.put(job)
     # As soon as 7 links are found, start downloads (already handled by pipeline)
     # Signal end of queue
     for _ in range(num_search_workers):
