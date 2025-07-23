@@ -96,8 +96,7 @@ This project is open source and available under the [MIT License](LICENSE). Feel
 
 ---
 
-**Ready to add your own crazy solution? Let's make some magic happen! **
+**Ready to add your own crazy solution? Let's make some magic happen!**
 
----
 
 *Made with ❤️ by people who refuse to accept "that's impossible" as an answer.* 
