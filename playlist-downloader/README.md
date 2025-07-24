@@ -2,6 +2,8 @@
 
 A powerful Python script that downloads songs from Spotify and YouTube playlists by searching for them on YouTube and saving them as high-quality audio files. Features a user-friendly interface, supports multiple playlists, and includes smart features like progress tracking and automatic retries.
 
+> **Yes, [SpotDL](https://github.com/spotDL/spotify-downloader) exists. But I still built this — because reinventing the wheel is how you learn to drive.**
+
 ---
 
 ## What Does This Script Do?
