@@ -31,6 +31,7 @@ missing_*.txt
 # Environment configuration (keep .env.example)
 .config/.env
 .config/user.json
+config.json
 
 # OS files
 .DS_Store
