@@ -35,3 +35,7 @@ Desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Local environment files
+# Keep local secrets out of the repo
+.env
