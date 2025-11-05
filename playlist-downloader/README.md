@@ -58,10 +58,6 @@ Features a user-friendly interface, supports multiple playlists, and includes sm
    - Edit `.config\.env`
    - Add your `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`
 
-3. **Run the application**:
-   ```cmd
-   run.bat
-   ```
 
 ### macOS / Linux
 
@@ -79,12 +75,6 @@ Features a user-friendly interface, supports multiple playlists, and includes sm
 2. **Configure your Spotify credentials**:
    - Edit `.config/.env`
    - Add your `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`
-
-3. **Run the application**:
-   ```bash
-   chmod +x run.sh
-   ./run.sh
-   ```
 
 ---
 
