@@ -55,7 +55,8 @@ def load_config_json():
     if not os.path.exists(CONFIG_JSON) or os.stat(CONFIG_JSON).st_size == 0:
         print('Config file missing or empty. Running configure.py...')
         try:
-            subprocess.run([sys.executable, 'configure.py'], check=True)
+            # Run configure as a module so imports like 'modules.*' resolve correctly
+            subprocess.run([sys.executable, '-m', 'modules.configure'], check=True)
         except Exception as e:
             print(f'Failed to run configure.py: {e}')
     try:
@@ -88,6 +89,7 @@ AUDIO_QUALITY = os.getenv("AUDIO_QUALITY", "320K")
 AUDIO_FORMAT = os.getenv("AUDIO_FORMAT", "best")
 DOWNLOAD_DELAY = float(os.getenv("DOWNLOAD_DELAY", "1.5"))
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
+YOUTUBE_COOKIES = os.getenv("YOUTUBE_COOKIES")  # Path to cookies file for YouTube auth
 SEARCH_DELAY_RANGE = (
     float(os.getenv("SEARCH_DELAY_MIN", "0.5")),
     float(os.getenv("SEARCH_DELAY_MAX", "1.5"))
@@ -271,7 +273,7 @@ def add_playlist_interactive():
         console.print("[yellow]No playlists yet.[/yellow]")
     console.print("[dim]Type 'm' at any prompt to go back to the main menu.[/dim]")
     while True:
-        label = Prompt.ask("[bold]Enter a label for your new playlist[/bold]", default="", console=console).strip()
+        label = Prompt.ask("[bold]Enter the playlist name[/bold]", default="", console=console).strip()
         if label.lower() == 'm':
             console.print("[cyan]Returning to main menu.[/cyan]")
             break
@@ -545,8 +547,8 @@ def main():
                 # Launch async_downloader.py for all playlists
                 console.print("[green]Starting download of all missing songs...[/green]")
                 args = [
-                    sys.executable, 
-                    'async_downloader.py',
+                    sys.executable,
+                    '-m', 'modules.async_downloader',
                     '--search-workers', str(SEARCH_WORKERS),
                     '--download-workers', str(DOWNLOAD_WORKERS),
                     '--audio-format', AUDIO_FORMAT,
@@ -559,6 +561,9 @@ def main():
                     '--spotify-client-secret', SPOTIFY_CLIENT_SECRET,
                     '--spotify-redirect-uri', SPOTIFY_REDIRECT_URI
                 ]
+                # Add YouTube cookies if available
+                if YOUTUBE_COOKIES and os.path.exists(YOUTUBE_COOKIES):
+                    args.extend(['--youtube-cookies', YOUTUBE_COOKIES])
                 subprocess.run(args)
                 console.print("[bold green]Download complete![/bold green]")
             elif choice == 'e':
@@ -578,7 +583,7 @@ def main():
             print('Launching async_downloader.py for sync and download...')
             try:
                 args = [
-                    sys.executable, 'async_downloader.py',
+                    sys.executable, '-m', 'modules.async_downloader',
                     '--search-workers', str(SEARCH_WORKERS),
                     '--download-workers', str(DOWNLOAD_WORKERS),
                     '--audio-format', AUDIO_FORMAT,
@@ -591,6 +596,9 @@ def main():
                     '--spotify-client-secret', SPOTIFY_CLIENT_SECRET,
                     '--spotify-redirect-uri', SPOTIFY_REDIRECT_URI
                 ]
+                # Add YouTube cookies if available
+                if YOUTUBE_COOKIES and os.path.exists(YOUTUBE_COOKIES):
+                    args.extend(['--youtube-cookies', YOUTUBE_COOKIES])
                 result = subprocess.run(args, check=True)
             except Exception as e:
                 print(f'Failed to run async_downloader.py: {e}')

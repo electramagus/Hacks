@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Packaging / testing cache
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Application-specific runtime files
+downloads/
+logs/
+.cache
+.cache-*
+*.part
+*.ytdl
+*.log
+progress.json
+missing_*.txt
+
+# Environment configuration (keep .env.example)
+.config/.env
+.config/user.json
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
