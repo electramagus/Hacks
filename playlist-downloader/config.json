@@ -1,7 +1,0 @@
-{
-  "cpu_cores": 12,
-  "total_mem_gb": 14.94,
-  "max_threads": 24,
-  "max_processes": 8,
-  "platform": "linux"
-}
