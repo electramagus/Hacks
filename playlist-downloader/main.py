@@ -41,6 +41,10 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.text import Text
 from rich import box
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+
+# Import our metadata tagger module
+from modules.metadata_tagger import MetadataTagger, refresh_metadata_for_directory
 
 console = Console()
 
@@ -392,6 +396,153 @@ def get_youtube_playlist_tracks_sync(playlist_url: str):
         console.print(f"[red]Failed to fetch YouTube playlist info: {e}[/red]")
         return None, []
 
+def refresh_metadata_interactive(sp):
+    """Interactive function to refresh metadata for audio files in download folders"""
+    console.rule("[bold cyan]🎨 Refresh Metadata (High Quality)[/bold cyan]")
+    console.print("[yellow]⚠️  IMPORTANT: This only adds metadata TAGS (title, artist, album, cover art)[/yellow]")
+    console.print("[yellow]   Your filenames and audio content will NOT be changed![/yellow]")
+    console.print("[dim]This will scan audio files and attach high-quality metadata from Spotify[/dim]")
+    console.print("[dim]High resolution album artwork (up to 640x640 or larger) will be embedded[/dim]\n")
+    
+    # Show available options
+    options_table = Table(title="[bold]Refresh Options[/bold]", box=box.SIMPLE)
+    options_table.add_column("#", style="bold yellow", width=4)
+    options_table.add_column("Option", style="white")
+    options_table.add_row("1", "Refresh all playlists in download folder")
+    options_table.add_row("2", "Select specific playlist folder")
+    options_table.add_row("3", "Custom directory")
+    options_table.add_row("m", "Back to main menu")
+    console.print(options_table)
+    
+    choice = Prompt.ask("[bold]Choose an option[/bold]", choices=["1", "2", "3", "m"], default="m", console=console)
+    
+    if choice == 'm':
+        console.print("[cyan]Returning to main menu.[/cyan]")
+        return
+    
+    target_dir = None
+    force_update = False
+    
+    if choice == '1':
+        # Refresh all playlists
+        target_dir = Path(OUTPUT_DIR)
+        console.print(f"[cyan]Will scan all subdirectories in: {target_dir}[/cyan]")
+    
+    elif choice == '2':
+        # Select specific playlist
+        if not os.path.exists(OUTPUT_DIR):
+            console.print(f"[red]Output directory does not exist: {OUTPUT_DIR}[/red]")
+            return
+        
+        # List available playlist folders
+        subdirs = [d for d in Path(OUTPUT_DIR).iterdir() if d.is_dir()]
+        if not subdirs:
+            console.print(f"[red]No playlist folders found in {OUTPUT_DIR}[/red]")
+            return
+        
+        folders_table = Table(title="[bold]Available Playlist Folders[/bold]", box=box.SIMPLE)
+        folders_table.add_column("#", style="bold yellow", width=4)
+        folders_table.add_column("Folder", style="cyan")
+        for i, folder in enumerate(subdirs, 1):
+            folders_table.add_row(str(i), folder.name)
+        console.print(folders_table)
+        
+        folder_choice = Prompt.ask(f"[bold]Select folder (1-{len(subdirs)})[/bold]", console=console)
+        try:
+            idx = int(folder_choice) - 1
+            if 0 <= idx < len(subdirs):
+                target_dir = subdirs[idx]
+            else:
+                console.print("[red]Invalid selection[/red]")
+                return
+        except ValueError:
+            console.print("[red]Invalid input[/red]")
+            return
+    
+    elif choice == '3':
+        # Custom directory
+        custom_path = Prompt.ask("[bold]Enter directory path[/bold]", console=console).strip().strip('"\'')
+        target_dir = Path(custom_path).expanduser().resolve()
+        
+        if not target_dir.exists():
+            console.print(f"[red]Directory does not exist: {target_dir}[/red]")
+            return
+        
+        if not target_dir.is_dir():
+            console.print(f"[red]Path is not a directory: {target_dir}[/red]")
+            return
+    
+    # Ask about force update
+    force_choice = Prompt.ask(
+        "[bold]Force update existing metadata?[/bold] (will overwrite current tags)",
+        choices=["y", "n"],
+        default="n",
+        console=console
+    )
+    force_update = force_choice == 'y'
+    
+    # Confirm
+    confirm_panel = Panel.fit(
+        f"[bold]Directory:[/bold] {target_dir}\n"
+        f"[bold]Force Update:[/bold] {'Yes' if force_update else 'No (skip files with metadata)'}\n"
+        f"[bold]Quality:[/bold] Highest available (up to 640x640+ album art)\n"
+        f"\n[yellow]⚠️  Files will NOT be renamed - only internal metadata tags updated[/yellow]\n"
+        f"[dim]Filename is used to search for correct metadata[/dim]",
+        title="[bold yellow]Confirm Settings[/bold yellow]"
+    )
+    console.print(confirm_panel)
+    
+    confirm = Prompt.ask("[bold green]Proceed with metadata refresh?[/bold green]", choices=["y", "n"], default="y", console=console)
+    if confirm != 'y':
+        console.print("[yellow]Operation cancelled[/yellow]")
+        return
+    
+    # Initialize metadata tagger
+    console.print("\n[cyan]Initializing metadata tagger...[/cyan]")
+    tagger = MetadataTagger(sp=sp)
+    
+    # Find all audio files
+    audio_files = [f for f in target_dir.rglob("*") if f.is_file() and f.suffix.lower() in ['.mp3', '.flac', '.m4a', '.aac', '.opus', '.ogg']]
+    
+    if not audio_files:
+        console.print(f"[yellow]No audio files found in {target_dir}[/yellow]")
+        return
+    
+    console.print(f"[green]Found {len(audio_files)} audio files[/green]\n")
+    
+    # Process files with progress bar
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        console=console
+    ) as progress:
+        task = progress.add_task("[cyan]Processing audio files...", total=len(audio_files))
+        
+        for file_path in audio_files:
+            progress.update(task, description=f"[cyan]Processing: {file_path.name[:40]}...")
+            success, status = tagger.process_file(file_path, force=force_update)
+            progress.advance(task)
+    
+    # Show results
+    stats = tagger.get_stats()
+    
+    console.print("\n")
+    results_table = Table(title="[bold green]✨ Metadata Refresh Complete[/bold green]", box=box.ROUNDED)
+    results_table.add_column("Metric", style="bold cyan")
+    results_table.add_column("Count", style="white", justify="right")
+    results_table.add_row("Files Processed", str(stats['processed']))
+    results_table.add_row("Successfully Tagged", str(stats['tagged']), style="green")
+    results_table.add_row("Already Had Metadata", str(stats['already_tagged']), style="yellow")
+    results_table.add_row("No Match Found", str(stats['errors']), style="red")
+    console.print(results_table)
+    
+    if stats['tagged'] > 0:
+        console.print("\n[bold green]🎉 Metadata refresh successful! All tagged files now have high-quality album art.[/bold green]")
+    
+    input("\n[dim]Press Enter to return to menu...[/dim]")
+
 def main():
     # Beautified Device Configuration
     console.clear()
@@ -453,10 +604,11 @@ def main():
         menu_table.add_row("1.", "Add a playlist")
         menu_table.add_row("2.", "Check undownloaded songs")
         menu_table.add_row("3.", "Sync and download")
-        menu_table.add_row("4.", "Exit")
+        menu_table.add_row("4.", "Refresh metadata (High Quality)")
+        menu_table.add_row("5.", "Exit")
         menu_panel = Panel(menu_table, title="[bold blue]Home Menu[/bold blue]", expand=False, border_style="blue")
         console.print(menu_panel)
-        choice = Prompt.ask("[bold green]Choose an option (1-4)[/bold green]", choices=["1", "2", "3", "4"], default="4", console=console)
+        choice = Prompt.ask("[bold green]Choose an option (1-5)[/bold green]", choices=["1", "2", "3", "4", "5"], default="5", console=console)
         if choice == '1':
             add_playlist_interactive()
         elif choice == '2':
@@ -603,6 +755,9 @@ def main():
             except Exception as e:
                 print(f'Failed to run async_downloader.py: {e}')
         elif choice == '4':
+            # Refresh metadata with high quality images
+            refresh_metadata_interactive(sp)
+        elif choice == '5':
             console.print(f"[bold magenta]Goodbye, {name}! 👋[/bold magenta]")
             break
         else:

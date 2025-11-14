@@ -16,6 +16,12 @@ spotipy==2.25.1
 # Progress bars
 tqdm==4.67.1
 
+# Audio metadata tagging
+mutagen>=1.47.0
+
+# HTTP requests for downloading album art
+requests>=2.31.0
+
 # Required for yt-dlp (installed separately)
 # yt-dlp - Install with: pip install yt-dlp
 # or: python -m pip install yt-dlp
