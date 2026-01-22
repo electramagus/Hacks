@@ -471,6 +471,75 @@ class MetadataTagger:
             logger.error(f"Generic tagging error: {e}")
             return False
     
+    def process_file_with_track_info(self, file_path: Path, track_artist: str, track_title: str, force: bool = False) -> Tuple[bool, str]:
+        """
+        Process a single audio file using playlist track info as source of truth
+        
+        IMPORTANT: Uses playlist track info (artist, title) to search for metadata.
+        The filename stays unchanged - only internal metadata tags are updated.
+        
+        Args:
+            file_path: Path to the audio file (filename stays unchanged!)
+            track_artist: Artist name from playlist (SOURCE OF TRUTH)
+            track_title: Track title from playlist (SOURCE OF TRUTH)
+            force: If True, overwrite existing metadata tags
+            
+        Returns:
+            Tuple of (success: bool, status: str)
+            Status can be: 'tagged', 'skipped', 'no_match', 'error'
+        """
+        self.stats['processed'] += 1
+        
+        try:
+            # Check if file is supported
+            if file_path.suffix.lower() not in SUPPORTED_FORMATS:
+                logger.warning(f"Unsupported file format: {file_path.name}")
+                self.stats['errors'] += 1
+                return False, 'error'
+            
+            # Check if already has complete metadata
+            if not force and self.has_complete_metadata(file_path):
+                logger.info(f"Already has complete metadata: {file_path.name}")
+                self.stats['already_tagged'] += 1
+                return True, 'skipped'
+            
+            # Use playlist track info as the source of truth
+            query_info = {
+                'artist': track_artist,
+                'title': track_title
+            }
+            
+            logger.info(f"🔍 Searching using PLAYLIST info for: {file_path.name}")
+            logger.info(f"   Playlist says: {track_artist} - {track_title}")
+            
+            # Search Spotify
+            spotify_data = self.search_spotify(query_info)
+            
+            if not spotify_data:
+                logger.warning(f"❌ No Spotify match found for: {track_artist} - {track_title}")
+                logger.warning(f"   Skipping file (filename unchanged): {file_path.name}")
+                self.stats['errors'] += 1
+                return False, 'no_match'
+            
+            # Show what we found
+            found_artist = spotify_data['artists'][0]['name']
+            found_title = spotify_data['name']
+            logger.info(f"✓ Found match: {found_artist} - {found_title}")
+            
+            # Apply metadata (this only changes internal tags, NOT the filename)
+            if self.apply_metadata(file_path, spotify_data, force):
+                logger.info(f"✓ Tagged file (filename unchanged): {file_path.name}")
+                self.stats['tagged'] += 1
+                return True, 'tagged'
+            else:
+                self.stats['errors'] += 1
+                return False, 'error'
+                
+        except Exception as e:
+            logger.error(f"Error processing {file_path.name}: {e}")
+            self.stats['errors'] += 1
+            return False, 'error'
+    
     def process_file(self, file_path: Path, force: bool = False, use_filename_as_source: bool = True) -> Tuple[bool, str]:
         """
         Process a single audio file - search for metadata and apply it

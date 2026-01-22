@@ -40,6 +40,17 @@ if errorlevel 1 (
 echo [OK] Virtual environment activated
 echo.
 
+REM Check for yt-dlp updates
+echo [*] Checking for yt-dlp updates...
+pip install --upgrade yt-dlp --quiet >nul 2>&1
+
+if errorlevel 1 (
+    echo [!] Could not check for updates (continuing anyway^)
+) else (
+    echo [OK] yt-dlp is up to date
+)
+echo.
+
 REM Run the application
 echo [*] Starting Playlist Manager...
 echo ================================================================

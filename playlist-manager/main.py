@@ -397,80 +397,48 @@ def get_youtube_playlist_tracks_sync(playlist_url: str):
         return None, []
 
 def refresh_metadata_interactive(sp):
-    """Interactive function to refresh metadata for audio files in download folders"""
+    """Interactive function to refresh metadata for audio files using playlists as source of truth"""
     console.rule("[bold cyan]🎨 Refresh Metadata (High Quality)[/bold cyan]")
     console.print("[yellow]⚠️  IMPORTANT: This only adds metadata TAGS (title, artist, album, cover art)[/yellow]")
     console.print("[yellow]   Your filenames and audio content will NOT be changed![/yellow]")
-    console.print("[dim]This will scan audio files and attach high-quality metadata from Spotify[/dim]")
+    console.print("[dim]This uses PLAYLIST data as source of truth to search for high-quality metadata[/dim]")
     console.print("[dim]High resolution album artwork (up to 640x640 or larger) will be embedded[/dim]\n")
     
-    # Show available options
-    options_table = Table(title="[bold]Refresh Options[/bold]", box=box.SIMPLE)
-    options_table.add_column("#", style="bold yellow", width=4)
-    options_table.add_column("Option", style="white")
-    options_table.add_row("1", "Refresh all playlists in download folder")
-    options_table.add_row("2", "Select specific playlist folder")
-    options_table.add_row("3", "Custom directory")
-    options_table.add_row("m", "Back to main menu")
-    console.print(options_table)
+    # Load playlists
+    _, links, _ = playlist_labels_and_links()
+    if not links:
+        console.print("[red]No playlists found! Please add playlists first.[/red]")
+        input("\n[dim]Press Enter to return to menu...[/dim]")
+        return
     
-    choice = Prompt.ask("[bold]Choose an option[/bold]", choices=["1", "2", "3", "m"], default="m", console=console)
+    # Show available playlists
+    playlists_table = Table(title="[bold]Available Playlists[/bold]", box=box.SIMPLE)
+    playlists_table.add_column("#", style="bold yellow", width=4)
+    playlists_table.add_column("Playlist", style="cyan")
+    playlists_table.add_row("0", "All playlists")
+    for i, (label, ptype, link) in enumerate(links, 1):
+        playlists_table.add_row(str(i), f"{label} ({ptype})")
+    playlists_table.add_row("m", "Back to main menu")
+    console.print(playlists_table)
     
-    if choice == 'm':
+    choice = Prompt.ask(f"[bold]Choose playlist (0-{len(links)}, or m)[/bold]", console=console)
+    
+    if choice.lower() == 'm':
         console.print("[cyan]Returning to main menu.[/cyan]")
         return
     
-    target_dir = None
-    force_update = False
-    
-    if choice == '1':
-        # Refresh all playlists
-        target_dir = Path(OUTPUT_DIR)
-        console.print(f"[cyan]Will scan all subdirectories in: {target_dir}[/cyan]")
-    
-    elif choice == '2':
-        # Select specific playlist
-        if not os.path.exists(OUTPUT_DIR):
-            console.print(f"[red]Output directory does not exist: {OUTPUT_DIR}[/red]")
+    try:
+        choice_num = int(choice)
+        if choice_num == 0:
+            selected_playlists = links
+        elif 1 <= choice_num <= len(links):
+            selected_playlists = [links[choice_num - 1]]
+        else:
+            console.print("[red]Invalid selection[/red]")
             return
-        
-        # List available playlist folders
-        subdirs = [d for d in Path(OUTPUT_DIR).iterdir() if d.is_dir()]
-        if not subdirs:
-            console.print(f"[red]No playlist folders found in {OUTPUT_DIR}[/red]")
-            return
-        
-        folders_table = Table(title="[bold]Available Playlist Folders[/bold]", box=box.SIMPLE)
-        folders_table.add_column("#", style="bold yellow", width=4)
-        folders_table.add_column("Folder", style="cyan")
-        for i, folder in enumerate(subdirs, 1):
-            folders_table.add_row(str(i), folder.name)
-        console.print(folders_table)
-        
-        folder_choice = Prompt.ask(f"[bold]Select folder (1-{len(subdirs)})[/bold]", console=console)
-        try:
-            idx = int(folder_choice) - 1
-            if 0 <= idx < len(subdirs):
-                target_dir = subdirs[idx]
-            else:
-                console.print("[red]Invalid selection[/red]")
-                return
-        except ValueError:
-            console.print("[red]Invalid input[/red]")
-            return
-    
-    elif choice == '3':
-        # Custom directory
-        custom_path = Prompt.ask("[bold]Enter directory path[/bold]", console=console).strip().strip('"\'')
-        target_dir = Path(custom_path).expanduser().resolve()
-        
-        if not target_dir.exists():
-            console.print(f"[red]Directory does not exist: {target_dir}[/red]")
-            return
-        
-        if not target_dir.is_dir():
-            console.print(f"[red]Path is not a directory: {target_dir}[/red]")
-            return
+    except ValueError:
+        console.print("[red]Invalid input[/red]")
+        return
     
     # Ask about force update
     force_choice = Prompt.ask(
@@ -482,12 +450,14 @@ def refresh_metadata_interactive(sp):
     force_update = force_choice == 'y'
     
     # Confirm
+    playlist_names = [label for label, _, _ in selected_playlists]
     confirm_panel = Panel.fit(
-        f"[bold]Directory:[/bold] {target_dir}\n"
+        f"[bold]Playlists:[/bold] {', '.join(playlist_names)}\n"
+        f"[bold]Source of Truth:[/bold] Playlist track info (artist + title)\n"
         f"[bold]Force Update:[/bold] {'Yes' if force_update else 'No (skip files with metadata)'}\n"
         f"[bold]Quality:[/bold] Highest available (up to 640x640+ album art)\n"
         f"\n[yellow]⚠️  Files will NOT be renamed - only internal metadata tags updated[/yellow]\n"
-        f"[dim]Filename is used to search for correct metadata[/dim]",
+        f"[dim]Only processes songs that exist locally AND are in your playlists[/dim]",
         title="[bold yellow]Confirm Settings[/bold yellow]"
     )
     console.print(confirm_panel)
@@ -501,16 +471,10 @@ def refresh_metadata_interactive(sp):
     console.print("\n[cyan]Initializing metadata tagger...[/cyan]")
     tagger = MetadataTagger(sp=sp)
     
-    # Find all audio files
-    audio_files = [f for f in target_dir.rglob("*") if f.is_file() and f.suffix.lower() in ['.mp3', '.flac', '.m4a', '.aac', '.opus', '.ogg']]
+    # Process each playlist
+    audio_exts = ['.mp3', '.m4a', '.opus', '.flac', '.wav', '.ogg', '.aac']
+    total_processed = 0
     
-    if not audio_files:
-        console.print(f"[yellow]No audio files found in {target_dir}[/yellow]")
-        return
-    
-    console.print(f"[green]Found {len(audio_files)} audio files[/green]\n")
-    
-    # Process files with progress bar
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -518,12 +482,69 @@ def refresh_metadata_interactive(sp):
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         console=console
     ) as progress:
-        task = progress.add_task("[cyan]Processing audio files...", total=len(audio_files))
         
-        for file_path in audio_files:
-            progress.update(task, description=f"[cyan]Processing: {file_path.name[:40]}...")
-            success, status = tagger.process_file(file_path, force=force_update)
-            progress.advance(task)
+        for label, ptype, link in selected_playlists:
+            # Fetch playlist tracks
+            playlist_name, tracks = None, []
+            
+            if ptype == 'spotify':
+                playlist_name, tracks = get_spotify_tracks(sp, link)
+            elif ptype == 'youtube':
+                playlist_name, tracks = get_youtube_playlist_tracks_sync(link)
+                if playlist_name:
+                    playlist_name = sanitize_filename(playlist_name)
+                else:
+                    playlist_name = sanitize_filename(label)
+            else:
+                console.print(f"[yellow]Skipping unsupported playlist type '{ptype}' for: {label}[/yellow]")
+                continue
+            
+            if not playlist_name or not tracks:
+                console.print(f"[red]Could not fetch playlist or no tracks found for {label}.[/red]")
+                continue
+            
+            playlist_dir = Path(OUTPUT_DIR) / playlist_name
+            if not playlist_dir.exists():
+                console.print(f"[yellow]Playlist directory not found: {playlist_dir}[/yellow]")
+                console.print(f"[dim]Skipping {label} - no local files[/dim]")
+                continue
+            
+            # Build local files map
+            local_files = {}
+            for f in playlist_dir.iterdir():
+                if f.is_file() and f.suffix.lower() in audio_exts:
+                    base_name = f.stem
+                    local_files[base_name] = f
+            
+            if not local_files:
+                console.print(f"[yellow]No audio files found in: {playlist_dir}[/yellow]")
+                continue
+            
+            console.print(f"\n[bold magenta]Processing: {playlist_name}[/bold magenta]")
+            console.print(f"[dim]Found {len(local_files)} local files, {len(tracks)} tracks in playlist[/dim]")
+            
+            # Process each track in the playlist
+            task = progress.add_task(f"[cyan]Processing {playlist_name}...", total=len(tracks))
+            
+            for track in tracks:
+                # Expected filename based on playlist track info
+                expected_filename = sanitize_filename(f"{track['artist']} - {track['name']}")
+                
+                # Check if this file exists locally
+                if expected_filename in local_files:
+                    file_path = local_files[expected_filename]
+                    
+                    # Use playlist track info as source of truth
+                    progress.update(task, description=f"[cyan]{track['artist'][:20]} - {track['name'][:20]}...")
+                    success, status = tagger.process_file_with_track_info(
+                        file_path, 
+                        track['artist'], 
+                        track['name'], 
+                        force=force_update
+                    )
+                    total_processed += 1
+                
+                progress.advance(task)
     
     # Show results
     stats = tagger.get_stats()
@@ -532,7 +553,7 @@ def refresh_metadata_interactive(sp):
     results_table = Table(title="[bold green]✨ Metadata Refresh Complete[/bold green]", box=box.ROUNDED)
     results_table.add_column("Metric", style="bold cyan")
     results_table.add_column("Count", style="white", justify="right")
-    results_table.add_row("Files Processed", str(stats['processed']))
+    results_table.add_row("Playlist Tracks Checked", str(stats['processed']))
     results_table.add_row("Successfully Tagged", str(stats['tagged']), style="green")
     results_table.add_row("Already Had Metadata", str(stats['already_tagged']), style="yellow")
     results_table.add_row("No Match Found", str(stats['errors']), style="red")
@@ -541,6 +562,7 @@ def refresh_metadata_interactive(sp):
     if stats['tagged'] > 0:
         console.print("\n[bold green]🎉 Metadata refresh successful! All tagged files now have high-quality album art.[/bold green]")
     
+    console.print("\n[dim]Note: Only songs that exist locally AND are in your playlists were processed[/dim]")
     input("\n[dim]Press Enter to return to menu...[/dim]")
 
 def main():

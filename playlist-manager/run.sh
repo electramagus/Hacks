@@ -48,6 +48,17 @@ fi
 echo -e "${GREEN}✓ Virtual environment activated${NC}"
 echo ""
 
+# Check for yt-dlp updates
+echo -e "${CYAN}➜ Checking for yt-dlp updates...${NC}"
+pip install --upgrade yt-dlp --quiet 2>&1 | grep -v "Requirement already satisfied" || true
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓ yt-dlp is up to date${NC}"
+else
+    echo -e "${YELLOW}⚠ Could not check for updates (continuing anyway)${NC}"
+fi
+echo ""
+
 # Run the application
 echo -e "${CYAN}➜ Starting Playlist Manager...${NC}"
 echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════${NC}"
