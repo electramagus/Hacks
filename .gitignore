@@ -33,6 +33,7 @@ Desktop.ini
 # IDE
 .vscode/
 .idea/
+.obsidian/
 *.swp
 *.swo
 
