@@ -399,10 +399,6 @@ def get_youtube_playlist_tracks_sync(playlist_url: str):
 def refresh_metadata_interactive(sp):
     """Interactive function to refresh metadata for audio files using playlists as source of truth"""
     console.rule("[bold cyan]🎨 Refresh Metadata (High Quality)[/bold cyan]")
-    console.print("[yellow]⚠️  IMPORTANT: This only adds metadata TAGS (title, artist, album, cover art)[/yellow]")
-    console.print("[yellow]   Your filenames and audio content will NOT be changed![/yellow]")
-    console.print("[dim]This uses PLAYLIST data as source of truth to search for high-quality metadata[/dim]")
-    console.print("[dim]High resolution album artwork (up to 640x640 or larger) will be embedded[/dim]\n")
     
     # Load playlists
     _, links, _ = playlist_labels_and_links()
@@ -440,6 +436,52 @@ def refresh_metadata_interactive(sp):
         console.print("[red]Invalid input[/red]")
         return
     
+    # Check if any selected playlists are YouTube
+    has_youtube = any(ptype == 'youtube' for _, ptype, _ in selected_playlists)
+    
+    # Default to strict validation for safety (especially important for YouTube)
+    use_strict_validation = True
+    
+    if has_youtube:
+        # Show warning about YouTube playlists
+        warning_panel = Panel.fit(
+            "[bold yellow]⚠️  YouTube Playlist Warning[/bold yellow]\n\n"
+            "YouTube playlists may contain:\n"
+            "• Remixes, covers, and unofficial versions\n"
+            "• Custom uploads that won't match Spotify\n"
+            "• Amateur content with inaccurate titles\n\n"
+            "[bold cyan]STRICT VALIDATION IS ENABLED BY DEFAULT[/bold cyan]\n"
+            "Strict mode will skip tracks that appear to be remixes/covers/unofficial\n"
+            "unless Spotify also finds a matching remix/cover version.\n\n"
+            "This prevents wrong metadata from being applied to your files.",
+            title="[bold red]⚠️  Important[/bold red]",
+            border_style="yellow"
+        )
+        console.print(warning_panel)
+        console.print()
+        
+        strict_choice = Prompt.ask(
+            "[bold]Keep strict validation enabled?[/bold] (Highly Recommended)",
+            choices=["y", "n"],
+            default="y",
+            console=console
+        )
+        use_strict_validation = strict_choice == 'y'
+        
+        if not use_strict_validation:
+            console.print("[bold red]⚠️  WARNING: Without strict validation, wrong metadata may be applied![/bold red]")
+            console.print("[yellow]Remixes and covers will be tagged with official track metadata![/yellow]\n")
+    else:
+        # For Spotify playlists, still ask about strict validation
+        console.print("\n[dim]Strict validation helps ensure accurate metadata matching.[/dim]")
+        strict_choice = Prompt.ask(
+            "[bold]Use strict validation?[/bold]",
+            choices=["y", "n"],
+            default="y",
+            console=console
+        )
+        use_strict_validation = strict_choice == 'y'
+    
     # Ask about force update
     force_choice = Prompt.ask(
         "[bold]Force update existing metadata?[/bold] (will overwrite current tags)",
@@ -451,9 +493,11 @@ def refresh_metadata_interactive(sp):
     
     # Confirm
     playlist_names = [label for label, _, _ in selected_playlists]
+    validation_status = "[bold green]ENABLED (Safe)[/bold green]" if use_strict_validation else "[bold red]DISABLED (Risky!)[/bold red]"
     confirm_panel = Panel.fit(
         f"[bold]Playlists:[/bold] {', '.join(playlist_names)}\n"
         f"[bold]Source of Truth:[/bold] Playlist track info (artist + title)\n"
+        f"[bold]Strict Validation:[/bold] {validation_status}\n"
         f"[bold]Force Update:[/bold] {'Yes' if force_update else 'No (skip files with metadata)'}\n"
         f"[bold]Quality:[/bold] Highest available (up to 640x640+ album art)\n"
         f"\n[yellow]⚠️  Files will NOT be renamed - only internal metadata tags updated[/yellow]\n"
@@ -534,14 +578,25 @@ def refresh_metadata_interactive(sp):
                 if expected_filename in local_files:
                     file_path = local_files[expected_filename]
                     
+                    # ALWAYS use strict validation for YouTube playlists (safety first!)
+                    # For Spotify, respect user choice
+                    is_youtube_track = (ptype == 'youtube')
+                    use_strict = is_youtube_track or use_strict_validation
+                    
                     # Use playlist track info as source of truth
                     progress.update(task, description=f"[cyan]{track['artist'][:20]} - {track['name'][:20]}...")
                     success, status = tagger.process_file_with_track_info(
                         file_path, 
                         track['artist'], 
                         track['name'], 
-                        force=force_update
+                        force=force_update,
+                        strict_validation=use_strict
                     )
+                    
+                    # Show validation failures immediately
+                    if not success and status == 'no_match' and use_strict:
+                        console.print(f"[yellow]⚠️  Skipped (validation failed): {track['artist']} - {track['name']}[/yellow]")
+                    
                     total_processed += 1
                 
                 progress.advance(task)

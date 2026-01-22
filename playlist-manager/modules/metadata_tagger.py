@@ -1,25 +1,6 @@
 """
-High-Quality Music Metadata Tagger Module
+Music Metadata Tagger Module
 Automatically fetches and applies high-quality metadata to audio files using Spotify API
-Optimized for maximum quality - prioritizes image quality over file size
-
-IMPORTANT BEHAVIOR:
-- This module ONLY modifies metadata tags INSIDE audio files (ID3, FLAC, MP4 tags)
-- Filenames are NEVER changed - they remain exactly as they are
-- The filename is used as the SOURCE OF TRUTH to search for the correct metadata
-- Audio content is NEVER modified - only metadata tags are added/updated
-
-Usage:
-    from modules.metadata_tagger import MetadataTagger
-    
-    # Initialize with Spotify credentials
-    tagger = MetadataTagger(client_id="...", client_secret="...")
-    
-    # Process a single file (filename stays unchanged!)
-    success, status = tagger.process_file(Path("Artist - Song.mp3"))
-    
-    # Process entire directory
-    stats = tagger.process_directory(Path("/music/folder"), recursive=True)
 """
 
 import os
@@ -43,8 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataTagger:
-    """High-quality metadata tagger for audio files using Spotify API"""
-    
     def __init__(self, client_id: str = None, client_secret: str = None, sp: Spotify = None):
         """
         Initialize the metadata tagger
@@ -198,6 +177,93 @@ class MetadataTagger:
         
         return None
     
+    def is_likely_unofficial_or_remix(self, track_title: str, track_artist: str) -> bool:
+        """
+        Check if a track is likely a remix, cover, or unofficial content
+        This helps avoid wrong metadata for YouTube tracks
+        
+        Args:
+            track_title: The track title from YouTube
+            track_artist: The artist/uploader from YouTube
+            
+        Returns:
+            True if track appears to be unofficial/remix, False otherwise
+        """
+        import re
+        
+        combined = f"{track_artist} {track_title}".lower()
+        
+        # Keywords that suggest unofficial/modified content
+        unofficial_keywords = [
+            'remix', 'cover', 'nightcore', 'slowed', 'reverb',
+            'speed up', 'sped up', 'slow down', 'slowed down',
+            '8d audio', '8d', 'bass boost', 'boosted',
+            'mashup', 'mix', 'extended', 'edit', 'version',
+            'acoustic', 'instrumental', 'karaoke', 'live',
+            'unofficial', 'fan made', 'bootleg', 'rip',
+            'audio only', 'lyrics', 'lyric video',
+            'amv', 'mep', 'pmv', 'nightcore'
+        ]
+        
+        for keyword in unofficial_keywords:
+            if keyword in combined:
+                return True
+        
+        return False
+    
+    def validate_spotify_match(self, spotify_track: Dict, youtube_title: str, youtube_artist: str, strict: bool = True) -> bool:
+        """
+        Validate if a Spotify search result is actually a good match for a YouTube track
+        
+        Args:
+            spotify_track: The Spotify track data
+            youtube_title: Original YouTube track title
+            youtube_artist: Original YouTube artist/uploader
+            strict: If True, use stricter validation (recommended for YouTube)
+            
+        Returns:
+            True if the match seems reliable, False otherwise
+        """
+        import re
+        from difflib import SequenceMatcher
+        
+        spotify_title = spotify_track['name'].lower()
+        spotify_artist = spotify_track['artists'][0]['name'].lower()
+        yt_title = youtube_title.lower()
+        yt_artist = youtube_artist.lower()
+        
+        # If the YouTube track looks unofficial, be very strict
+        if self.is_likely_unofficial_or_remix(youtube_title, youtube_artist):
+            # Only accept if Spotify track also has similar keywords
+            if not self.is_likely_unofficial_or_remix(spotify_track['name'], spotify_track['artists'][0]['name']):
+                logger.warning(f"Rejecting match: YouTube track appears to be remix/cover but Spotify result is official")
+                logger.warning(f"  YouTube: {youtube_artist} - {youtube_title}")
+                logger.warning(f"  Spotify: {spotify_artist} - {spotify_title}")
+                return False
+        
+        if strict:
+            # Check title similarity
+            title_similarity = SequenceMatcher(None, spotify_title, yt_title).ratio()
+            
+            # Check if artist name appears in YouTube title or uploader
+            artist_in_yt = spotify_artist in yt_title or spotify_artist in yt_artist
+            
+            # Check if title appears in YouTube metadata
+            title_words = set(spotify_title.split())
+            yt_words = set(yt_title.split())
+            common_words = title_words.intersection(yt_words)
+            word_overlap = len(common_words) / len(title_words) if title_words else 0
+            
+            # Strict requirements - increased threshold to 70%
+            if title_similarity < 0.7 and word_overlap < 0.5 and not artist_in_yt:
+                logger.info(f"Strict validation failed: insufficient similarity")
+                logger.info(f"  Title similarity: {title_similarity:.2f}, Word overlap: {word_overlap:.2f}")
+                logger.info(f"  YouTube: {youtube_artist} - {youtube_title}")
+                logger.info(f"  Spotify: {spotify_artist} - {spotify_title}")
+                return False
+        
+        return True
+    
     def has_complete_metadata(self, file_path: Path) -> bool:
         """
         Check if file already has complete metadata (title, artist, and artwork)
@@ -275,7 +341,7 @@ class MetadataTagger:
             total_tracks = spotify_data["album"].get("total_tracks", 0)
             album_artist = spotify_data["album"]["artists"][0]["name"] if spotify_data["album"]["artists"] else artists[0]
             
-            logger.info(f"📝 Adding metadata tags (not renaming file):")
+            logger.info(f"📝 Adding metadata tags")
             logger.info(f"   Title: {title}")
             logger.info(f"   Artist: {', '.join(artists)}")
             logger.info(f"   Album: {album}")
@@ -471,7 +537,8 @@ class MetadataTagger:
             logger.error(f"Generic tagging error: {e}")
             return False
     
-    def process_file_with_track_info(self, file_path: Path, track_artist: str, track_title: str, force: bool = False) -> Tuple[bool, str]:
+    def process_file_with_track_info(self, file_path: Path, track_artist: str, track_title: str, 
+                                     force: bool = False, strict_validation: bool = False) -> Tuple[bool, str]:
         """
         Process a single audio file using playlist track info as source of truth
         
@@ -483,6 +550,7 @@ class MetadataTagger:
             track_artist: Artist name from playlist (SOURCE OF TRUTH)
             track_title: Track title from playlist (SOURCE OF TRUTH)
             force: If True, overwrite existing metadata tags
+            strict_validation: If True, validate Spotify match quality (recommended for YouTube)
             
         Returns:
             Tuple of (success: bool, status: str)
@@ -520,6 +588,14 @@ class MetadataTagger:
                 logger.warning(f"   Skipping file (filename unchanged): {file_path.name}")
                 self.stats['errors'] += 1
                 return False, 'no_match'
+            
+            # Validate the match if strict validation is enabled
+            if strict_validation:
+                if not self.validate_spotify_match(spotify_data, track_title, track_artist, strict=True):
+                    logger.warning(f"❌ Spotify match validation failed for: {track_artist} - {track_title}")
+                    logger.warning(f"   Skipping to avoid wrong metadata (filename unchanged): {file_path.name}")
+                    self.stats['errors'] += 1
+                    return False, 'no_match'
             
             # Show what we found
             found_artist = spotify_data['artists'][0]['name']
