@@ -1,5 +1,5 @@
 @echo off
-REM Smart Setup Script for Playlist Downloader (Windows)
+REM Smart Setup Script for Playlist Manager (Windows)
 REM Checks all dependencies and guides user through setup
 REM Run this before using the application, it will ensure everything is ready
 
@@ -7,7 +7,7 @@ setlocal EnableDelayedExpansion
 
 echo.
 echo ================================================================
-echo          [*] Playlist Downloader - Smart Setup [*]
+echo          [*] Playlist Manager - Smart Setup [*]
 echo ================================================================
 echo.
 
@@ -320,7 +320,15 @@ if "!CLIENT_SECRET!"=="" (
 REM Create .config directory
 if not exist ".config\" mkdir .config
 
-REM Create .env file
+REM Check if .env already exists and extract OUTPUT_DIR if present
+set EXISTING_OUTPUT_DIR=./downloads
+if exist ".config\.env" (
+    for /f "tokens=1,* delims==" %%a in ('findstr /b "OUTPUT_DIR=" .config\.env 2^>nul') do (
+        set EXISTING_OUTPUT_DIR=%%b
+    )
+)
+
+REM Create .env file (preserving OUTPUT_DIR if it was already set)
 (
     echo # Spotify API Credentials
     echo SPOTIFY_CLIENT_ID=!CLIENT_ID!
@@ -328,7 +336,7 @@ REM Create .env file
     echo SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/callback
     echo.
     echo # Download Settings
-    echo OUTPUT_DIR=./downloads
+    echo OUTPUT_DIR=!EXISTING_OUTPUT_DIR!
     echo AUDIO_QUALITY=320K
     echo AUDIO_FORMAT=mp3
     echo DOWNLOAD_DELAY=1.5

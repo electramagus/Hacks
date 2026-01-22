@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smart Setup Script for Playlist Downloader (Linux/macOS)
+# Setup Script for Playlist Manager (Linux/macOS)
 # Checks all dependencies and guides user through setup
 # Run this before using the application, it will ensure everything is ready
 
@@ -28,7 +28,7 @@ IS_FIRST_TIME=false
 
 echo -e "${BOLD}${CYAN}"
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║        🎵 Playlist Downloader - Smart Setup 🎵             ║"
+echo "║        🎵 Playlist Manager - Setup 🎵             ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 echo ""
@@ -227,7 +227,13 @@ setup_credentials() {
     # Create .config directory if it doesn't exist
     mkdir -p .config
     
-    # Create/update .env file
+    # Check if .env already exists and extract OUTPUT_DIR if present
+    EXISTING_OUTPUT_DIR="./downloads"
+    if [ -f ".config/.env" ]; then
+        EXISTING_OUTPUT_DIR=$(grep "^OUTPUT_DIR=" .config/.env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "./downloads")
+    fi
+    
+    # Create/update .env file (preserving OUTPUT_DIR if it was already set)
     cat > .config/.env << EOF
 # Spotify API Credentials
 SPOTIFY_CLIENT_ID=$CLIENT_ID
@@ -235,7 +241,7 @@ SPOTIFY_CLIENT_SECRET=$CLIENT_SECRET
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/callback
 
 # Download Settings
-OUTPUT_DIR=./downloads
+OUTPUT_DIR=$EXISTING_OUTPUT_DIR
 AUDIO_QUALITY=320K
 AUDIO_FORMAT=mp3
 DOWNLOAD_DELAY=1.5

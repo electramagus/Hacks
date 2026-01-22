@@ -1,5 +1,5 @@
 """
-Async Playlist Downloader
+Async Playlist Manager
 ==========================
 High-performance concurrent downloader for Spotify and YouTube playlists.
 
@@ -54,7 +54,7 @@ def parse_arguments() -> argparse.Namespace:
         Parsed arguments namespace
     """
     parser = argparse.ArgumentParser(
-        description='Async Playlist Downloader - Download Spotify and YouTube playlists',
+        description='Async Playlist Manager - Download Spotify and YouTube playlists',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     
@@ -118,7 +118,7 @@ async def main():
     
     # Set up logging
     logger = setup_logging()
-    logger.info("Starting Async Playlist Downloader")
+    logger.info("Starting Async Playlist Manager")
     
     # Display header
     console.clear()

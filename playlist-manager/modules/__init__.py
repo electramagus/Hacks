@@ -1,5 +1,5 @@
 """
-Playlist Downloader Modules Package
+Playlist Manager Modules Package
 """
 
 __all__ = [

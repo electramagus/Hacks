@@ -356,7 +356,7 @@ def main() -> int:
         Exit code (0 for success, 1 for failure)
     """
     print("\n" + "=" * 60)
-    print("  🎵 Spotify Playlist Downloader - Initial Setup")
+    print("  🎵 Spotify Playlist Manager - Initial Setup")
     print("=" * 60)
     print()
     print("Welcome! This setup will configure your system for downloading")

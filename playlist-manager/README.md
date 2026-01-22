@@ -1,4 +1,4 @@
-# Spotify & YouTube Playlist Downloader
+# Playlist Manager
 
 The script downloads songs from Spotify and YouTube playlists by searching for them on YouTube and saving them as high-quality audio files. 
 Features a user-friendly interface, supports multiple playlists, and includes smart features like progress tracking and automatic retries.
@@ -382,7 +382,7 @@ During Python installation:
 ## 📁 Project Structure
 
 ```
-playlist-downloader/
+playlist-manager/
 ├── setup.sh              # Setup script (Linux/macOS)
 ├── setup.bat            # Setup script (Windows)
 ├── main.py              # Main interactive application

@@ -1,7 +1,7 @@
 """
 Shared Utilities Module
 =======================
-Common functions used across the playlist downloader application.
+Common functions used across the playlist manager application.
 Includes file operations, sanitization, and validation utilities.
 """
 
@@ -199,7 +199,7 @@ def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> loggi
     
     # Generate timestamped log filename
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_file = os.path.join(log_dir, f"playlist_downloader_{timestamp}.log")
+    log_file = os.path.join(log_dir, f"playlist_manager_{timestamp}.log")
     
     # Configure logging format
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -218,7 +218,7 @@ def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> loggi
         handlers=[file_handler, console_handler]
     )
     
-    logger = logging.getLogger('playlist_downloader')
+    logger = logging.getLogger('playlist_manager')
     logger.info(f"Logging initialized. Log file: {log_file}")
     
     return logger

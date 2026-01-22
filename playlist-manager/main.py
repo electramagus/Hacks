@@ -155,7 +155,7 @@ def get_user():
         except Exception:
             pass
     print("""
-Hey! 👋 I am your Spotify Playlist Downloader.
+Hey! 👋 I am your Spotify Playlist Manager.
 I can help you download all the songs from your Spotify playlists as MP3s, organized by playlist, and keep them in sync with your local folders.
 
 Features:
@@ -546,7 +546,7 @@ def refresh_metadata_interactive(sp):
 def main():
     # Beautified Device Configuration
     console.clear()
-    console.rule("[bold magenta]🎵 Spotify Playlist Downloader (Interactive Edition)[/bold magenta]", style="magenta")
+    console.rule("[bold magenta]🎵 Spotify Playlist Manager (Interactive Edition)[/bold magenta]", style="magenta")
     # Device config as a table
     device_table = Table(title="[bold cyan]Device Configuration[/bold cyan]", box=box.SIMPLE)
     device_table.add_column("Key", style="bold yellow")
