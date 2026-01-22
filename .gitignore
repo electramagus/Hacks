@@ -40,3 +40,4 @@ Desktop.ini
 # Local environment files
 # Keep local secrets out of the repo
 .env
+.docs/.obsidian/
