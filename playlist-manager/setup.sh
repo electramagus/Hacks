@@ -351,7 +351,7 @@ if [ "$IS_FIRST_TIME" = true ]; then
     echo "╚════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo ""
-    echo -e "You're ready to go! Run: ${GREEN}${BOLD}python main.py${NC}"
+    echo -e "You're ready to go! Run: ${GREEN}${BOLD}./run.sh${NC}"
     echo ""
     
 else
@@ -377,6 +377,6 @@ else
         fi
     fi
     
-    echo -e "You're all set! Run: ${GREEN}${BOLD}python main.py${NC}"
+    echo -e "You're all set! Run: ${GREEN}${BOLD}./run.sh${NC}"
     echo ""
 fi

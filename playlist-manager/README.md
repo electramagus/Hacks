@@ -58,6 +58,9 @@ Features a user-friendly interface, supports multiple playlists, and includes sm
    - Edit `.config\.env`
    - Add your `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`
 
+3. **Run the application**:
+   - **Easy way**: Double-click `run.bat`
+   - **Or from terminal**: `python main.py`
 
 ### macOS / Linux
 
@@ -76,9 +79,16 @@ Features a user-friendly interface, supports multiple playlists, and includes sm
    - Edit `.config/.env`
    - Add your `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`
 
+3. **Run the application**:
+   ```bash
+   ./run.sh
+   ```
+   Or manually: `source venv/bin/activate && python main.py`
+
 ---
 
 ## Detailed Installation (Manual Setup)
+git branch --set-upstream-to=V0.0.0.0
 
 If you prefer to set up manually or need more control:
 
@@ -385,6 +395,8 @@ During Python installation:
 playlist-manager/
 ├── setup.sh              # Setup script (Linux/macOS)
 ├── setup.bat            # Setup script (Windows)
+├── run.sh               # Launcher script (Linux/macOS)
+├── run.bat              # Launcher script (Windows)
 ├── main.py              # Main interactive application
 ├── async_downloader.py  # Async download engine
 ├── configure.py         # System resource detection

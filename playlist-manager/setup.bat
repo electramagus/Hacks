@@ -249,7 +249,7 @@ if !IS_FIRST_TIME!==1 (
     echo              [*] Setup Complete! [*]
     echo ================================================================
     echo.
-    echo You're ready to go! Run: python main.py
+    echo You're ready to go! Double-click run.bat or run: python main.py
     echo.
     
 ) else (
@@ -275,7 +275,7 @@ if !IS_FIRST_TIME!==1 (
         )
     )
     
-    echo You're all set! Run: python main.py
+    echo You're all set! Double-click run.bat or run: python main.py
     echo.
 )
 
